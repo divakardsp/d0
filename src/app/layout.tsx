@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono, Outfit, Raleway } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -46,14 +47,16 @@ export default function RootLayout({
             )}
         >
             <body className="min-h-full flex flex-col">
-                <ThemeProvider
-                    attribute="class"
-                    defaultTheme="system"
-                    enableSystem
-                    disableTransitionOnChange
-                >
-                    <QueryProvider>{children}</QueryProvider>
-                </ThemeProvider>
+                <ClerkProvider>
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="system"
+                        enableSystem
+                        disableTransitionOnChange
+                    >
+                        <QueryProvider>{children}</QueryProvider>
+                    </ThemeProvider>
+                </ClerkProvider>
             </body>
         </html>
     );
