@@ -22,7 +22,7 @@ export default async function Home() {
                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                         What do you want to create?
                     </h1>
-                    {/* <PromptInput /> */}
+                    <PromptInput />
                 </div>
 
                 {/* <div className="mt-16 w-full max-w-5xl">
