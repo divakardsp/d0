@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { inngest } from "./client";
 import { Sandbox } from "@e2b/code-interpreter";
 import { MessageRole } from "@/generated/prisma/enums";
-import { createState } from "@inngest/agent-kit";
+import { createState, gemini } from "@inngest/agent-kit";
 
 export interface CodeAgentState {
     sandboxId: string;
@@ -62,5 +62,18 @@ export const codeAgentFunction = inngest.createFunction(
             { sandboxId, summary: "", files: {} },
             { messages: previousMessages },
         );
+
+        const geminiModel = gemini({
+            model: "gemini-2.5-flash",
+            step,
+            apiKey: process.env.GEMINI_API_KEY!,
+            defaultParameters: {
+                generationConfig: {
+                    temperature: 0,
+                    maxOutputTokens: 8192,
+                    thinkingConfig: { thinkingBudget: 0 },
+                },
+            },
+        } as Parameters<typeof gemini>[0]);
     },
 );
