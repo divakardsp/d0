@@ -1,5 +1,6 @@
 // src/inngest/functions.ts
 import { inngest } from "./client";
+import { Sandbox } from "@e2b/code-interpreter";
 
 export const processTask = inngest.createFunction(
     { id: "process-task", triggers: { event: "app/task.created" } },
@@ -13,3 +14,19 @@ export const processTask = inngest.createFunction(
         return { message: `Task ${event.data.id} complete`, result };
     },
 );
+
+
+export const codeAgentFunction = inngest.createFunction(
+  { id: "code-agent", triggers: { event: "code-agent/run" } },
+  async ({ event, step }) => {
+    const sandboxId = await step.run("get-sandbox-id", async () => {
+      const sandbox = await Sandbox.create({
+        template: "ugwj9f6y2wocdpps7omf"
+      });
+
+      return sandbox.sandboxId;
+    })
+
+    
+
+})
