@@ -1,6 +1,8 @@
 // src/inngest/functions.ts
+import { prisma } from "@/lib/db";
 import { inngest } from "./client";
 import { Sandbox } from "@e2b/code-interpreter";
+import { MessageRole } from "@/generated/prisma/enums";
 
 export const processTask = inngest.createFunction(
     { id: "process-task", triggers: { event: "app/task.created" } },
@@ -27,6 +29,25 @@ export const codeAgentFunction = inngest.createFunction(
       return sandbox.sandboxId;
     })
 
-    
+
+    const previousMessages = await step.run("get-previous-messages", async () => {
+      const messages = await prisma.message.findMany({
+        where: {
+          projectId: event.data.projectId
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      });
+
+      return messages.map((message) => ({
+        type: "text" as const,
+        role:
+          message.role === MessageRole.ASSISTANT
+            ? ("assistant" as const)
+            : ("user" as const),
+        content: message.content,
+      }))
+    });
 
 })
