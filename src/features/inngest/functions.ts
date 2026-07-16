@@ -3,7 +3,15 @@ import { prisma } from "@/lib/db";
 import { inngest } from "./client";
 import { Sandbox } from "@e2b/code-interpreter";
 import { MessageRole } from "@/generated/prisma/enums";
-import { createState, gemini } from "@inngest/agent-kit";
+import {
+    createAgent,
+    createState,
+    createTool,
+    gemini,
+} from "@inngest/agent-kit";
+import { PROMPT } from "@/lib/prompt";
+import z from "zod";
+import { lastAssistantTextMessageContent } from "./utils";
 
 export interface CodeAgentState {
     sandboxId: string;
@@ -75,5 +83,142 @@ export const codeAgentFunction = inngest.createFunction(
                 },
             },
         } as Parameters<typeof gemini>[0]);
+
+        const codeAgent = createAgent({
+            name: "d0-code-agent",
+            description: "An expert coding agent",
+            system: PROMPT,
+            model: geminiModel,
+            tools: [
+                createTool({
+                    name: "terminal",
+                    description: "Use the terminal to run commands",
+                    parameters: z.object({
+                        command: z.string(),
+                    }),
+                    handler: async ({ command }, { step, network }) => {
+                        return await step?.run("terminal", async () => {
+                            const buffers = { stdout: "", stderr: "" };
+
+                            try {
+                                const sandbox =
+                                    await Sandbox.connect(sandboxId);
+
+                                const result = await sandbox.commands.run(
+                                    command,
+                                    {
+                                        onStdout: (data) => {
+                                            buffers.stdout += data;
+                                        },
+
+                                        onStderr: (data) => {
+                                            buffers.stderr += data;
+                                        },
+                                    },
+                                );
+
+                                return result.stdout;
+                            } catch (error) {
+                                console.log(
+                                    `Command failed: ${error} \n stdout: ${buffers.stdout}\n stderr: ${buffers.stderr}`,
+                                );
+
+                                return `Command failed: ${error} \n stdout: ${buffers.stdout}\n stderr: ${buffers.stderr}`;
+                            }
+                        });
+                    },
+                }),
+
+                createTool({
+                    name: "createOrUpdateFiles",
+                    description: "Create or update files in the sanbox",
+                    parameters: z.object({
+                        files: z.array(
+                            z.object({
+                                path: z.string(),
+                                content: z.string(),
+                            }),
+                        ),
+                    }),
+
+                    handler: async ({ files }, { step, network }) => {
+                        const newFiles = await step?.run(
+                            "createOrUpdateFiles",
+                            async () => {
+                                try {
+                                    const updatedFiles =
+                                        network?.state?.data.files || {};
+
+                                    const sandbox =
+                                        await Sandbox.connect(sandboxId);
+
+                                    for (const file of files) {
+                                        await sandbox.files.write(
+                                            file.path,
+                                            file.content,
+                                        );
+                                        updatedFiles[file.path] = file.content;
+                                    }
+
+                                    return updatedFiles;
+                                } catch (error) {
+                                    return "Error" + error;
+                                }
+                            },
+                        );
+
+                        if (typeof newFiles === "object") {
+                            network.state.data.files = newFiles;
+                        }
+                    },
+                }),
+                createTool({
+                    name: "readFiles",
+                    description: "Read files in the sandbox",
+
+                    parameters: z.object({
+                        files: z.array(z.string()),
+                    }),
+                    handler: async ({ files }, { step }) => {
+                        return await step?.run("readFiles", async () => {
+                            try {
+                                const sandbox =
+                                    await Sandbox.connect(sandboxId);
+
+                                const contents: any = [];
+                                console.log(contents);
+
+                                for (const file of files) {
+                                    const content =
+                                        await sandbox.files.read(file);
+                                    contents.push({ path: file, content });
+                                }
+                                return JSON.stringify(contents);
+                            } catch (error) {
+                                return "Error" + error;
+                            }
+                        });
+                    },
+                }),
+            ],
+            lifecycle: {
+                onResponse: async ({ result, network }) => {
+                    console.log(result);
+                    const lastAssistantMessageText =
+                        lastAssistantTextMessageContent(result);
+
+                    if (lastAssistantMessageText && network) {
+                        if (
+                            lastAssistantMessageText.includes("<task_summary>")
+                        ) {
+                            network.state.data.summary =
+                                lastAssistantMessageText;
+                        }
+                    }
+
+                    return result;
+                },
+            },
+        });
     },
 );
