@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Fragment } from "@/generated/prisma/client";
-// import ProjectHeader from "./project-header";
-// import MessageContainer from "./message-container";
+import ProjectHeader from "./project-header";
+import MessageContainer from "./message-container";
 // import FragmentWeb from "./fragment-web";
 // import { FileExplorer } from "./file-explorer";
 
@@ -33,12 +33,12 @@ export function ProjectView({ projectId }: { projectId: string }) {
                     minSize={20}
                     className="flex min-h-0 flex-col"
                 >
-                    {/* <ProjectHeader projectId={projectId} />
+                    <ProjectHeader projectId={projectId} />
                     <MessageContainer
                         projectId={projectId}
                         activeFragment={activeFragment}
                         setActiveFragment={setActiveFragment}
-                    /> */}
+                    />
                 </ResizablePanel>
 
                 <ResizableHandle withHandle />
