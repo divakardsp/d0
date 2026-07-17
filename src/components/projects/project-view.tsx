@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Fragment } from "@/generated/prisma/client";
 import ProjectHeader from "./project-header";
 import MessageContainer from "./message-container";
-// import FragmentWeb from "./fragment-web";
+import FragmentWeb from "./fragment-web";
 // import { FileExplorer } from "./file-explorer";
 
 export type ProjectFragment = Fragment & {
@@ -88,13 +88,13 @@ export function ProjectView({ projectId }: { projectId: string }) {
                             value="preview"
                             className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
                         >
-                            {/* {activeFragment ? (
+                            {activeFragment ? (
                                 <FragmentWeb data={activeFragment} />
                             ) : (
                                 <div className="flex h-full items-center justify-center text-muted-foreground">
                                     Select a fragment to preview
                                 </div>
-                            )} */}
+                            )}
                         </TabsContent>
 
                         <TabsContent
