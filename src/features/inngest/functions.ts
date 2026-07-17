@@ -38,7 +38,7 @@ export const codeAgentFunction = inngest.createFunction(
     async ({ event, step }) => {
         const sandboxId = await step.run("get-sandbox-id", async () => {
             const sandbox = await Sandbox.create({
-                template: "ugwj9f6y2wocdpps7omf",
+                template: "ns9vdjzj5oz85k9b8kjb",
             });
 
             return sandbox.sandboxId;
@@ -73,7 +73,7 @@ export const codeAgentFunction = inngest.createFunction(
         );
 
         const geminiModel = gemini({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             step,
             apiKey: process.env.GEMINI_API_KEY!,
             defaultParameters: {
