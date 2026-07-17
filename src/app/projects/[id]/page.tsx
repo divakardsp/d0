@@ -1,9 +1,12 @@
-import React from 'react'
+import { ProjectView } from "@/components/projects/project-view";
+import React from "react";
 
-function page() {
-  return (
-    <div>page</div>
-  )
+export default async function ProjectPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
+
+    return <ProjectView projectId={id} />;
 }
-
-export default page
