@@ -2,16 +2,17 @@
 import { prisma } from "@/lib/db";
 import { inngest } from "./client";
 import { Sandbox } from "@e2b/code-interpreter";
-import { MessageRole } from "@/generated/prisma/enums";
+import { MessageRole, MessageType } from "@/generated/prisma/enums";
 import {
     createAgent,
+    createNetwork,
     createState,
     createTool,
     gemini,
 } from "@inngest/agent-kit";
-import { PROMPT } from "@/lib/prompt";
+import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT } from "@/lib/prompt";
 import z from "zod";
-import { lastAssistantTextMessageContent } from "./utils";
+import { agentOutputText, connectSandbox, lastAssistantTextMessageContent } from "./utils";
 
 export interface CodeAgentState {
     sandboxId: string;
@@ -220,5 +221,90 @@ export const codeAgentFunction = inngest.createFunction(
                 },
             },
         });
+
+        const network = createNetwork({
+            name: "d0-code-network",
+            agents: [codeAgent],
+            maxIter: 15,
+            router: async ({ network }) => {
+                const summary = network.state.data.summary;
+                if (summary) {
+                    return;
+                }
+                return codeAgent;
+            },
+        });
+
+        const result = await network.run(event.data.value, { state });
+        console.log(result);
+        const { summary, files } = result.state.data;
+
+        const makeTextAgent = (name: string, system: string) =>
+            createAgent({ name, system, model: geminiModel });
+
+        const fragmentTitleGenerator = makeTextAgent(
+            "fragment-title-generator",
+            FRAGMENT_TITLE_PROMPT,
+        );
+        const responseGenerator = makeTextAgent(
+            "response-generator",
+            RESPONSE_PROMPT,
+        );
+
+        const [{ output: fragmentTitleOutput }, { output: responseOutput }] =
+            await Promise.all([
+                fragmentTitleGenerator.run(summary, { step }),
+                responseGenerator.run(summary, { step }),
+            ]);
+
+        const fragmentTitle = agentOutputText(fragmentTitleOutput, "Untitled");
+        const responseText = agentOutputText(responseOutput, "Here you go");
+
+        console.log(files);
+
+        const isError =
+            !result.state.data.summary ||
+            Object.keys(result.state.data.files || {}).length === 0;
+
+        const sandboxUrl = await step.run("get-sandbox-url", async () => {
+            const sandbox = await connectSandbox(sandboxId);
+            return `http://${sandbox.getHost(3000)}`;
+        });
+
+        await step.run("save-result", async () => {
+            if (isError) {
+                return prisma.message.create({
+                    data: {
+                        projectId: event.data.projectId,
+                        content: "Something went wrong. Please try again",
+                        role: MessageRole.ASSISTANT,
+                        type: MessageType.ERROR,
+                    },
+                });
+            }
+
+            return prisma.message.create({
+                data: {
+                    projectId: event.data.projectId,
+                    content: responseText,
+                    role: MessageRole.ASSISTANT,
+                    type: MessageType.RESULT,
+                    fragments: {
+                        create: {
+                            sandboxUrl,
+                            title: fragmentTitle,
+                            files,
+                        },
+                    },
+                },
+            });
+        });
+
+        return {
+            url: sandboxUrl,
+            title: fragmentTitle,
+            files,
+            summary,
+        };
     },
 );
