@@ -73,3 +73,38 @@ export const getProjects = async () => {
         };
     }
 };
+
+export const getProjectById = async (id: string) => {
+    const user = await getCurrentUser();
+
+    if (!user) {
+        return {
+            error: "Unauthorized",
+        };
+    }
+
+    try {
+        const project = await prisma.project.findUnique({
+            where: {
+                id,
+                userId: user.id,
+            },
+            include: {
+                messages: true,
+            },
+        });
+
+        if (!project) {
+            return {
+                error: "Project not found",
+            };
+        }
+
+        return project;
+    } catch (error) {
+        console.error("❌ Error getting project by id:", error);
+        return {
+            error: "Failed to get project by id",
+        };
+    }
+};

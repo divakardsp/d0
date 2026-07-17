@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createProject, getProjects, } from "../actions";
+import { createProject, getProjectById, getProjects, } from "../actions";
 
 export type ActionError = {
     error: string;
@@ -43,9 +43,9 @@ export const useGetProjects = () => {
     });
 };
 
-// export const useGetProjectById = (id: string) => {
-//     return useQuery({
-//         queryKey: ["project", id],
-//         queryFn: async () => unwrapActionResult(await getProjectById(id)),
-//     });
-// };
+export const useGetProjectById = (id: string) => {
+    return useQuery({
+        queryKey: ["project", id],
+        queryFn: async () => unwrapActionResult(await getProjectById(id)),
+    });
+};
